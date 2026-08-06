@@ -1,43 +1,42 @@
 #include "wifi_connect.h"
 #include <WiFi.h>
-#include "LiquidCrystal_I2C.h"
+#include "lcd_helper.h"
 
-// Reference global LCD object declared in main.cpp
-extern LiquidCrystal_I2C lcd;
+// --- Wi-Fi Credentials ---
+const char *WIFI_SSID = "Vodafone-5A8C"; // Replace with your Wi-Fi SSID
+const char *WIFI_PASSWORD = "Naresh123*";
 
-void connectWiFi(const char* ssid, const char* password) {
-  lcd.setCursor(0, 0);
-  lcd.print("Connecting WiFi ");
+void connectWiFi()
+{
+  safeLcdWrite(0, 0, true, "Connecting WiFi ");
   Serial.print("Connecting to WiFi: ");
-  Serial.println(ssid);
+  Serial.println(WIFI_SSID);
 
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   uint8_t attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 20)
+  {
     delay(500);
     Serial.print(".");
-    lcd.setCursor(attempts % 16, 1);
-    lcd.print(".");
+    safeLcdWrite(attempts % 16, 1, true, ".");
     attempts++;
   }
 
-  lcd.clear();
-  if (WiFi.status() == WL_CONNECTED) {
+  if (WiFi.status() == WL_CONNECTED)
+  {
     Serial.println("\nWiFi Connected!");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
 
-    lcd.setCursor(0, 0);
-    lcd.print("WiFi Connected!");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP());
-    delay(2000);
-  } else {
-    Serial.println("\nWiFi Connection Failed!");
-    lcd.setCursor(0, 0);
-    lcd.print("WiFi Failed!");
+    safeLcdWrite(0, 0, true, "WiFi Connected!");
+    safeLcdWrite(0, 1, false, "IP: %s", WiFi.localIP().toString().c_str());
     delay(2000);
   }
-  lcd.clear();
+  else
+  {
+    Serial.println("\nWiFi Connection Failed!");
+    safeLcdWrite(0, 0, true, "WiFi Failed!");
+    delay(2000);
+  }
 }
