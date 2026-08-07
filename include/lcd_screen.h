@@ -4,5 +4,6 @@
 #include <Arduino.h>
 
 void initializeLCD();
+void TaskLCD(void *pvParameters);
 
 #endif
