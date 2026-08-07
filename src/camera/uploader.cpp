@@ -2,10 +2,9 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include "LiquidCrystal_I2C.h"
+#include "lcd_helper.h"
 
 // Reference global LCD object declared in main.cpp
-extern LiquidCrystal_I2C lcd;
 
 // --- ESP32-S3 CAM Pinout (Camera Bus) ---
 #define PWDN_GPIO_NUM -1
@@ -28,8 +27,77 @@ extern LiquidCrystal_I2C lcd;
 
 static QueueHandle_t cameraQueue = NULL;
 
-bool initCamera()
+const char *UPLOAD_URL = "https://webhook.site/cf06e580-d376-40f3-8b3f-75f29fcccf57";
+
+void captureAndUpload()
 {
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("Cannot upload: WiFi disconnected");
+    return;
+  }
+
+  // 1. Capture image frame from camera
+  camera_fb_t *fb = esp_camera_fb_get();
+
+  if (!fb)
+  {
+    safeLcdWrite(0, 0, true, "Camera capture failed! ");
+    Serial.println("Camera capture failed!");
+    return;
+  }
+
+  Serial.printf("Captured image size: %u bytes. Uploading...\n", fb->len);
+  safeLcdWrite(0, 1, false, "Uploading photo...");
+  // 2. Prepare HTTP POST request
+  HTTPClient http;
+  http.begin(UPLOAD_URL);
+  http.addHeader("Content-Type", "image/jpeg");
+
+  // 3. Send raw JPEG buffer via POST
+  int httpResponseCode = http.POST(fb->buf, fb->len);
+
+  if (httpResponseCode > 0)
+  {
+    Serial.printf("Upload successful! HTTP Response code: %d\n", httpResponseCode);
+  }
+  else
+  {
+    Serial.printf("Upload failed, error: %s\n", http.errorToString(httpResponseCode).c_str());
+  }
+
+  // 4. Clean up resources
+  http.end();
+  esp_camera_fb_return(fb); // Release frame memory back to camera driver
+}
+
+static void TaskCameraUploader(void *pvParameters)
+{
+  CameraEvent event;
+  for (;;)
+  {
+    if (xQueueReceive(cameraQueue, &event, portMAX_DELAY) == pdTRUE)
+    {
+      if (!event.photoTaken)
+      {
+        captureAndUpload();
+      }
+    }
+  }
+}
+
+bool triggerCameraUpload()
+{
+  if (cameraQueue == NULL)
+    return false;
+  CameraEvent event = {0.0f, false, millis()};
+  return xQueueSend(cameraQueue, &event, 0) == pdTRUE;
+}
+
+void initCamera()
+{
+  safeLcdWrite(0, 0, true, "Camera Initializing...      ");
+
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -74,58 +142,14 @@ bool initCamera()
   if (err != ESP_OK)
   {
     Serial.printf("Camera init failed with error 0x%x\n", err);
-    lcd.setCursor(0, 0);
-    lcd.print(err);
-    return false;
+    safeLcdWrite(0, 0, true, "Camera init failed with error 0x%x", err);
+    return;
   }
 
   cameraQueue = xQueueCreate(5, sizeof(CameraEvent));
 
-  return true;
-}
+  xTaskCreatePinnedToCore(
+      TaskCameraUploader, "CameraCaptureTask", 8192, NULL, 0, NULL, 1);
 
-bool captureAndUpload(const char *serverUrl)
-{
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.println("Cannot upload: WiFi disconnected");
-    return false;
-  }
-
-  // 1. Capture image frame from camera
-  camera_fb_t *fb = esp_camera_fb_get();
-  lcd.setCursor(0, 1);
-  if (!fb)
-  {
-    lcd.print("Camera capture failed!");
-    Serial.println("Camera capture failed!");
-    return false;
-  }
-
-  Serial.printf("Captured image size: %u bytes. Uploading...\n", fb->len);
-  lcd.print("Uploading photo...");
-  // 2. Prepare HTTP POST request
-  HTTPClient http;
-  http.begin(serverUrl);
-  http.addHeader("Content-Type", "image/jpeg");
-
-  // 3. Send raw JPEG buffer via POST
-  int httpResponseCode = http.POST(fb->buf, fb->len);
-
-  bool success = false;
-  if (httpResponseCode > 0)
-  {
-    Serial.printf("Upload successful! HTTP Response code: %d\n", httpResponseCode);
-    success = true;
-  }
-  else
-  {
-    Serial.printf("Upload failed, error: %s\n", http.errorToString(httpResponseCode).c_str());
-  }
-
-  // 4. Clean up resources
-  http.end();
-  esp_camera_fb_return(fb); // Release frame memory back to camera driver
-
-  return success;
+  safeLcdWrite(0, 1, false, "Camera Ready1...      ");
 }

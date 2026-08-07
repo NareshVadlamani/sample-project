@@ -5,5 +5,6 @@
 
 void initializeUltrasonicSensor();
 float readDistance();
+void readUltrasonicSensor();
 
 #endif

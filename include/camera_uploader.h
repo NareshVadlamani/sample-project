@@ -3,16 +3,18 @@
 
 #include <Arduino.h>
 
-struct CameraEvent {
+struct CameraEvent
+{
   float distance;
   bool photoTaken;
   uint32_t timestamp;
 };
 
 // Initialize OV2640 camera hardware
-bool initCamera();
+void initCamera();
 
 // Capture a frame and POST it to your server URL
-bool captureAndUpload(const char* serverUrl);
+void captureAndUpload();
+bool triggerCameraUpload();
 
 #endif // CAMERA_UPLOADER_H
