@@ -1,5 +1,6 @@
 #include "wifi_connect.h"
 #include <WiFi.h>
+#include "config.h"
 
 // --- Wi-Fi Credentials ---
 const char *WIFI_SSID = "Vodafone-5A8C"; // Replace with your Wi-Fi SSID
@@ -25,12 +26,14 @@ void connectWiFi()
     Serial.println("\nWiFi Connected!");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
+    sendToLcd("WiFi....", "Connected");
 
     delay(2000);
   }
   else
   {
     Serial.println("\nWiFi Connection Failed!");
+    sendToLcd("WiFi....", "Failed");
     delay(2000);
   }
 }
