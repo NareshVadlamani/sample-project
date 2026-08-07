@@ -15,6 +15,8 @@ QueueHandle_t xEventQueue = NULL;
 QueueHandle_t xLcdQueue = NULL;
 Servo doorServo;
 
+volatile bool isFingerprintEnabled = false;
+
 void setup()
 {
   Serial.begin(115200);

@@ -22,6 +22,8 @@ void TaskSystemManager(void *pvParameters)
                 {
                     currentState = STATE_AWAITING_FINGER;
                     sendToLcd("Welcome!", "Scan Finger...");
+                    isFingerprintEnabled = true;
+                    doorServo.write(180); // open finger print sensor cover
                 }
                 break;
 

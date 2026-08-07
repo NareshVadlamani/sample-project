@@ -59,6 +59,8 @@ extern Servo doorServo;
 extern QueueHandle_t xEventQueue;
 extern QueueHandle_t xLcdQueue;
 
+extern volatile bool isFingerprintEnabled;
+
 // Shared Display Helper Function
 void sendToLcd(const char *l1, const char *l2, bool clear = false);
 

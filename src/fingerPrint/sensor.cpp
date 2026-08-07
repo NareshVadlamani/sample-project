@@ -122,16 +122,19 @@ void TaskFingerprint(void *pvParameters)
 {
   for (;;)
   {
-    int fingerID = getFingerprintID();
-    if (fingerID >= 0)
+    if (isFingerprintEnabled)
     {
-      SystemEvent ev = {EVENT_FINGER_MATCHED, finger.fingerID};
-      xQueueSend(xEventQueue, &ev, 0);
-    }
-    else
-    {
-      SystemEvent ev = {EVENT_FINGER_FAILED, 0};
-      xQueueSend(xEventQueue, &ev, 0);
+      int fingerID = getFingerprintID();
+      if (fingerID >= 0)
+      {
+        SystemEvent ev = {EVENT_FINGER_MATCHED, finger.fingerID};
+        xQueueSend(xEventQueue, &ev, 0);
+      }
+      else
+      {
+        SystemEvent ev = {EVENT_FINGER_FAILED, 0};
+        xQueueSend(xEventQueue, &ev, 0);
+      }
     }
 
     vTaskDelay(pdMS_TO_TICKS(150));
