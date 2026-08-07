@@ -22,6 +22,11 @@ float readDistance()
     return (duration * SOUND_SPEED) / 2.0;
 }
 
+void resetUltrasonicPresence()
+{
+    activePresence = false;
+}
+
 void readUltrasonicSensor()
 {
     float distance = readDistance();
@@ -35,14 +40,12 @@ void readUltrasonicSensor()
             xQueueSend(xEventQueue, &ev, 0);
         }
     }
-    else if (distance > RELEASE_DISTANCE_CM)
+    else if (distance > RELEASE_DISTANCE_CM || distance <= 0)
     {
-        if (activePresence)
-        {
-            activePresence = false;
-            SystemEvent ev = {EVENT_PERSON_LEFT, 0};
-            xQueueSend(xEventQueue, &ev, 0);
-        }
+
+        activePresence = false;
+        SystemEvent ev = {EVENT_PERSON_LEFT, 0};
+        xQueueSend(xEventQueue, &ev, 0);
     }
 }
 

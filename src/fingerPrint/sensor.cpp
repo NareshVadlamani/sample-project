@@ -146,9 +146,9 @@ void initFingerprint()
   mySerial.begin(57600, SERIAL_8N1, FP_RX_PIN, FP_TX_PIN);
   pinMode(ENROLL_BTN_PIN, INPUT_PULLUP); // Set Enroll Button Pin as Input with Pull-up
   delay(100);
-
   if (finger.verifyPassword())
   {
+    finger.setSecurityLevel(1);
     finger.getTemplateCount();
     nextEnrollID = finger.templateCount + 1;
     xTaskCreatePinnedToCore(

@@ -30,7 +30,7 @@ void initializeLCD()
     lcd.init();
     lcd.backlight();
     lcd.setCursor(0, 0);
-    lcd.print("System Ready");
+    lcd.print("System Ready v1.1");
     xTaskCreatePinnedToCore(TaskLCD, "LCD_Task", 3072, NULL, 2, NULL, 1);
 }
 

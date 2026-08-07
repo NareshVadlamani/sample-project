@@ -18,8 +18,8 @@
 #define ENROLL_BTN_PIN 14 // fingerprint enrollment button pin
 
 #define SOUND_SPEED 0.0343
-const float TRIGGER_DISTANCE_CM = 20.0;
-const float RELEASE_DISTANCE_CM = 30.0;
+const float TRIGGER_DISTANCE_CM = 30.0;
+const float RELEASE_DISTANCE_CM = 50.0;
 
 // System States & Event Types
 enum SystemState

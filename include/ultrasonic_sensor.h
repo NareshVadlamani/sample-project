@@ -5,5 +5,6 @@
 
 void initializeUltrasonicSensor();
 void TaskUltrasonic(void *pvParameters);
+void resetUltrasonicPresence();
 
 #endif
