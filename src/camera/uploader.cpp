@@ -28,7 +28,7 @@ static QueueHandle_t cameraQueue = NULL;
 
 const char *UPLOAD_URL = "https://webhook.site/cf06e580-d376-40f3-8b3f-75f29fcccf57";
 
-void captureAndUpload()
+void captureAndUpload(bool photoTaken)
 {
   if (WiFi.status() != WL_CONNECTED)
   {
@@ -66,6 +66,7 @@ void captureAndUpload()
   // 4. Clean up resources
   http.end();
   esp_camera_fb_return(fb); // Release frame memory back to camera driver
+  photoTaken = true;        // Mark that a photo has been taken
 }
 
 static void TaskCameraUploader(void *pvParameters)
@@ -77,7 +78,7 @@ static void TaskCameraUploader(void *pvParameters)
     {
       if (!event.photoTaken)
       {
-        captureAndUpload();
+        captureAndUpload(event.photoTaken);
       }
     }
   }

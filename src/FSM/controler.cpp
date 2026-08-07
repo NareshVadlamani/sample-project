@@ -3,6 +3,7 @@
 #include "config.h"
 #include "fingerprint_sensor.h"
 #include "ultrasonic_sensor.h"
+#include "camera_uploader.h"
 
 void TaskSystemManager(void *pvParameters)
 {
@@ -40,6 +41,7 @@ void TaskSystemManager(void *pvParameters)
                     char buf[17];
                     snprintf(buf, sizeof(buf), "User #%d", event.payload);
                     sendToLcd("Access Granted!", buf);
+                    triggerCameraUpload(); // Capture and upload photo
 
                     doorServo.write(90);             // Unlock door
                     vTaskDelay(pdMS_TO_TICKS(3000)); // Hold open for 3 seconds
@@ -58,7 +60,7 @@ void TaskSystemManager(void *pvParameters)
                         retryCount = 0; // Reset retry count after reaching the limit
                         currentState = STATE_ACCESS_DENIED;
                         sendToLcd("Access Denied!", "Try Again");
-
+                        triggerCameraUpload();           // Capture and upload photo of the person
                         vTaskDelay(pdMS_TO_TICKS(2000)); // Display message for 2 seconds
                         xQueueReset(xEventQueue);
                         resetUltrasonicPresence(); // Clear any pending events
