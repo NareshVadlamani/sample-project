@@ -2,7 +2,6 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include "lcd_helper.h"
 
 // Reference global LCD object declared in main.cpp
 
@@ -42,13 +41,11 @@ void captureAndUpload()
 
   if (!fb)
   {
-    safeLcdWrite(0, 0, true, "Camera capture failed! ");
     Serial.println("Camera capture failed!");
     return;
   }
 
   Serial.printf("Captured image size: %u bytes. Uploading...\n", fb->len);
-  safeLcdWrite(0, 1, false, "Uploading photo...");
   // 2. Prepare HTTP POST request
   HTTPClient http;
   http.begin(UPLOAD_URL);
@@ -96,7 +93,6 @@ bool triggerCameraUpload()
 
 void initCamera()
 {
-  safeLcdWrite(0, 0, true, "Camera Initializing...      ");
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -142,7 +138,6 @@ void initCamera()
   if (err != ESP_OK)
   {
     Serial.printf("Camera init failed with error 0x%x\n", err);
-    safeLcdWrite(0, 0, true, "Camera init failed with error 0x%x", err);
     return;
   }
 
@@ -150,6 +145,4 @@ void initCamera()
 
   xTaskCreatePinnedToCore(
       TaskCameraUploader, "CameraCaptureTask", 8192, NULL, 0, NULL, 1);
-
-  safeLcdWrite(0, 1, false, "Camera Ready1...      ");
 }

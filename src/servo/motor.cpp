@@ -1,21 +1,17 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
-
-Servo myServo;
+#include "config.h"
 
 void initializeServo()
 {
-  // Initialize Servo Pin
-  const uint8_t SERVO_PIN = 1;
-  myServo.attach(SERVO_PIN);
+  doorServo.attach(SERVO_PIN);
 
   // Initialize Servo
   ESP32PWM::allocateTimer(0);
-  myServo.setPeriodHertz(50); // Standard 50Hz servo
-  myServo.attach(SERVO_PIN, 500, 2400);
+  doorServo.setPeriodHertz(50); // Standard 50Hz servo
+  doorServo.attach(SERVO_PIN, 500, 2400);
 
-  // Start servo at 0 degrees
-  myServo.write(0);
+  doorServo.write(0);
 }
 
 void rotateServoToAngle(int angle)
@@ -25,5 +21,5 @@ void rotateServoToAngle(int angle)
     Serial.println("Invalid angle! Please provide an angle between 0 and 180 degrees.");
     return;
   }
-  myServo.write(angle);
+  doorServo.write(angle);
 }

@@ -2,30 +2,36 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include <Wire.h>
-#include "LiquidCrystal_I2C.h"
 #include "wifi_connect.h"
 #include "camera_uploader.h"
 #include "fingerprint_sensor.h"
 #include "ultrasonic_sensor.h"
 #include "servo_motor.h"
 #include "lcd_screen.h"
-#include "lcd_helper.h"
+#include "fsm_controler.h"
+#include "config.h"
 
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Set I2C address (usually 0x27 or 0x3F), 16 columns, 2 rows
-
-SemaphoreHandle_t lcdMutex; // Mutex for LCD access
+QueueHandle_t xEventQueue = NULL;
+QueueHandle_t xLcdQueue = NULL;
+Servo doorServo;
 
 void setup()
 {
   Serial.begin(115200);
-  lcdMutex = xSemaphoreCreateMutex(); // Create mutex for LCD access
+  delay(1000); // Allow time for Serial Monitor to initialize
+
+  xEventQueue = xQueueCreate(10, sizeof(SystemEvent));
+  xLcdQueue = xQueueCreate(5, sizeof(LcdMessage));
+
+  initializeLCD();   // Initialize LCD
+  initFingerprint(); // Initialize Fingerprint Sensor
+  initializeServo(); // Initialize Servo Pin
 
   initializeUltrasonicSensor(); // Initialize Ultrasonic
-  initializeServo();            // Initialize Servo Pin
-  initializeLCD();              // Initialize LCD
   connectWiFi();                // Connect to Wi-Fi
   initCamera();                 // Initialize Camera
-  initFingerprint();            // Initialize Fingerprint Sensor
+
+  xTaskCreatePinnedToCore(TaskSystemManager, "FSM_Task", 4096, NULL, 3, NULL, 1);
 
   Serial.println("--- ESP32-S3 Obstacle Detection System Ready ---");
 }

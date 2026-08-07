@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 void initializeUltrasonicSensor();
-float readDistance();
-void readUltrasonicSensor();
+void TaskUltrasonic(void *pvParameters);
 
 #endif
