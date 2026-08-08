@@ -1,7 +1,10 @@
-#include "camera_uploader.h"
-#include "esp_camera.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
+
+#include "camera_uploader.h"
+#include "esp_camera.h"
+#include "config.h"
 
 // Reference global LCD object declared in main.cpp
 
@@ -26,18 +29,68 @@
 
 static QueueHandle_t cameraQueue = NULL;
 
-const char *UPLOAD_URL = "https://webhook.site/cf06e580-d376-40f3-8b3f-75f29fcccf57";
+const char *UPLOAD_URL = "https://api-iot-raithunestham.onrender.com/api/upload/image";
+// Helper to stream image bytes to custom cloud uploader
 
-void captureAndUpload(bool photoTaken)
+String uploadImageToCloud(uint8_t *imageBytes, size_t length)
 {
   if (WiFi.status() != WL_CONNECTED)
+    return "";
+
+  HTTPClient http;
+  http.begin(UPLOAD_URL);
+
+  // 1. Define multipart boundary
+  String boundary = "----ESP32Boundary12345";
+  http.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
+
+  // 2. Build multipart head (matches curl -F "image=@...")
+  String head = "--" + boundary + "\r\n";
+  head += "Content-Disposition: form-data; name=\"image\"; filename=\"photo.jpg\"\r\n";
+  head += "Content-Type: image/jpeg\r\n\r\n";
+
+  // 3. Build multipart tail
+  String tail = "\r\n--" + boundary + "--\r\n";
+
+  // 4. Calculate total payload length
+  size_t totalLen = head.length() + length + tail.length();
+
+  // 5. Allocate buffer & assemble payload
+  uint8_t *payloadBuffer = (uint8_t *)malloc(totalLen);
+  if (!payloadBuffer)
   {
-    Serial.println("Cannot upload: WiFi disconnected");
-    return;
+    Serial.println("[CameraTask] Out of memory for upload buffer!");
+    http.end();
+    return "";
   }
 
-  // 1. Capture image frame from camera
-  camera_fb_t *fb = esp_camera_fb_get();
+  // Copy head -> JPEG binary bytes -> tail
+  memcpy(payloadBuffer, head.c_str(), head.length());
+  memcpy(payloadBuffer + head.length(), imageBytes, length);
+  memcpy(payloadBuffer + head.length() + length, tail.c_str(), tail.length());
+
+  // 6. Send HTTP POST
+  int httpResponseCode = http.POST(payloadBuffer, totalLen);
+  free(payloadBuffer); // Free memory buffer immediately
+
+  String responseBody = "";
+  if (httpResponseCode == 200 || httpResponseCode == 201)
+  {
+    responseBody = http.getString();
+  }
+  else
+  {
+    Serial.printf("[CameraTask] Upload failed, HTTP Code: %d\n", httpResponseCode);
+  }
+
+  http.end();
+  return responseBody;
+}
+
+void captureAndUpload(CameraEvent event)
+{
+
+  camera_fb_t *fb = esp_camera_fb_get(); // 1. Capture image frame from camera
 
   if (!fb)
   {
@@ -46,27 +99,29 @@ void captureAndUpload(bool photoTaken)
   }
 
   Serial.printf("Captured image size: %u bytes. Uploading...\n", fb->len);
-  // 2. Prepare HTTP POST request
-  HTTPClient http;
-  http.begin(UPLOAD_URL);
-  http.addHeader("Content-Type", "image/jpeg");
-
-  // 3. Send raw JPEG buffer via POST
-  int httpResponseCode = http.POST(fb->buf, fb->len);
-
-  if (httpResponseCode > 0)
-  {
-    Serial.printf("Upload successful! HTTP Response code: %d\n", httpResponseCode);
-  }
-  else
-  {
-    Serial.printf("Upload failed, error: %s\n", http.errorToString(httpResponseCode).c_str());
-  }
-
-  // 4. Clean up resources
-  http.end();
+  String responseJson = uploadImageToCloud(fb->buf, fb->len);
   esp_camera_fb_return(fb); // Release frame memory back to camera driver
-  photoTaken = true;        // Mark that a photo has been taken
+  event.photoTaken = true;  // Mark that a photo has been taken
+
+  // 4. Parse returned JSON payload
+  if (responseJson.length() > 0)
+  {
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, responseJson);
+
+    if (!err && doc["success"].as<bool>())
+    {
+
+      // Construct lightweight log payload
+      LogPayload payload;
+      snprintf(payload.imageUrl, sizeof(payload.imageUrl), "%s", doc["data"]["url"].as<const char *>());
+      strncpy(payload.name, "Naresh", sizeof(payload.name) - 1);
+      payload.name[sizeof(payload.name) - 1] = '\0'; // Manually ensure null-termination
+
+      // 5. Push payload to pure logging task
+      xQueueSend(xLogQueue, &payload, 0);
+    }
+  }
 }
 
 static void TaskCameraUploader(void *pvParameters)
@@ -78,7 +133,7 @@ static void TaskCameraUploader(void *pvParameters)
     {
       if (!event.photoTaken)
       {
-        captureAndUpload(event.photoTaken);
+        captureAndUpload(event);
       }
     }
   }

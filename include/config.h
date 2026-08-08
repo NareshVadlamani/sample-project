@@ -51,6 +51,14 @@ struct LcdMessage
     bool clearFirst;
 };
 
+struct LogPayload
+{
+    char imageUrl[128];
+    char name[64];
+    // uint16_t userId;
+    // EventType logReason; // e.g., EVENT_FINGER_FAILED, EVENT_PERSON_NEAR
+};
+
 // Global Hardware & Queue Handles
 extern LiquidCrystal_I2C lcd;
 extern Adafruit_Fingerprint finger;
@@ -58,6 +66,7 @@ extern Servo doorServo;
 
 extern QueueHandle_t xEventQueue;
 extern QueueHandle_t xLcdQueue;
+extern QueueHandle_t xLogQueue;
 
 extern volatile bool isFingerprintEnabled;
 
