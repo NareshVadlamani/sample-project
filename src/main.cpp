@@ -11,6 +11,7 @@
 #include "fsm_controler.h"
 #include "config.h"
 #include "network_add_logs.h"
+#include "helper_timer.h"
 
 QueueHandle_t xEventQueue = NULL;
 QueueHandle_t xLcdQueue = NULL;
@@ -43,6 +44,7 @@ void setup()
 
   delay(1000); // Allow for init
 
+  initTime();
   initializeLCD();   // Initialize LCD
   initFingerprint(); // Initialize Fingerprint Sensor
   initializeServo(); // Initialize Servo Pin

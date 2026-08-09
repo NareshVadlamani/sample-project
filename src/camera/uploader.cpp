@@ -32,7 +32,7 @@ static QueueHandle_t cameraQueue = NULL;
 const char *UPLOAD_URL = "https://api-iot-raithunestham.onrender.com/api/upload/image";
 // Helper to stream image bytes to custom cloud uploader
 
-String uploadImageToCloud(uint8_t *imageBytes, size_t length)
+String uploadImageToCloud(uint8_t *imageBytes, size_t length, const char *eventId)
 {
   if (WiFi.status() != WL_CONNECTED)
     return "";
@@ -44,9 +44,14 @@ String uploadImageToCloud(uint8_t *imageBytes, size_t length)
   String boundary = "----ESP32Boundary12345";
   http.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
 
-  // 2. Build multipart head (matches curl -F "image=@...")
+  // 2. Build text field for eventId
   String head = "--" + boundary + "\r\n";
-  head += "Content-Disposition: form-data; name=\"image\"; filename=\"photo.jpg\"\r\n";
+  head += "Content-Disposition: form-data; name=\"eventId\"\r\n\r\n";
+  head += String(eventId) + "\r\n";
+
+  // 2. Build multipart head (matches curl -F "image=@...")
+  head += "--" + boundary + "\r\n";
+  head += "Content-Disposition: form-data; name=\"image\"; filename=\"" + String(eventId) + ".jpg\"\r\n";
   head += "Content-Type: image/jpeg\r\n\r\n";
 
   // 3. Build multipart tail
@@ -100,7 +105,7 @@ void captureAndUpload(CameraEvent event)
   }
 
   Serial.printf("[Camera] Captured %u bytes. Uploading...\n", fb->len);
-  String responseJson = uploadImageToCloud(fb->buf, fb->len);
+  String responseJson = uploadImageToCloud(fb->buf, fb->len, event.eventId);
   esp_camera_fb_return(fb); // Release frame memory back to driver immediately
   event.photoTaken = true;
 
@@ -147,11 +152,13 @@ static void TaskCameraUploader(void *pvParameters)
   }
 }
 
-bool triggerCameraUpload()
+bool triggerCameraUpload(const char *eventId)
 {
   if (cameraQueue == NULL)
     return false;
-  CameraEvent event = {0.0f, false, millis()};
+  CameraEvent event;
+  snprintf(event.eventId, sizeof(event.eventId), "%s", eventId);
+  event.timestamp = millis();
   return xQueueSend(cameraQueue, &event, 0) == pdTRUE;
 }
 

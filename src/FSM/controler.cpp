@@ -4,6 +4,8 @@
 #include "fingerprint_sensor.h"
 #include "ultrasonic_sensor.h"
 #include "camera_uploader.h"
+#include "helper_timer.h"
+
 void TaskSystemManager(void *pvParameters)
 {
     SystemState currentState = STATE_IDLE;
@@ -52,10 +54,13 @@ void TaskSystemManager(void *pvParameters)
                 {
                     currentState = STATE_ACCESS_GRANTED;
 
+                    char eventId[32];
+                    generateEventId(eventId, sizeof(eventId));
+
                     char buf[17];
                     snprintf(buf, sizeof(buf), "User #%d", event.payload.intValue);
                     sendToLcd("Access Granted!", buf);
-                    triggerCameraUpload(); // Capture and upload photo
+                    triggerCameraUpload(eventId); // Capture and upload photo
 
                     doorServo.write(90);             // Unlock door
                     vTaskDelay(pdMS_TO_TICKS(3000)); // Hold open for 3 seconds
@@ -72,8 +77,12 @@ void TaskSystemManager(void *pvParameters)
                     {
                         retryCount = 0; // Reset retry count after reaching the limit
                         currentState = STATE_ACCESS_DENIED;
+
+                        char eventId[32];
+                        generateEventId(eventId, sizeof(eventId));
+
                         sendToLcd("Access Denied!", "Try Again");
-                        triggerCameraUpload();           // Capture and upload photo of the person
+                        triggerCameraUpload(eventId);    // Capture and upload photo of the person
                         vTaskDelay(pdMS_TO_TICKS(2000)); // Display message for 2 seconds
                         resetUltrasonicPresence();       // Clear any pending events
                         currentState = STATE_IDLE;

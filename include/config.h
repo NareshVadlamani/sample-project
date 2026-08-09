@@ -42,10 +42,18 @@ enum EventType
 };
 struct LogPayload
 {
+    char eventId[32];
     char imageUrl[256];
     char name[64];
     // uint16_t userId;
     // EventType logReason; // e.g., EVENT_FINGER_FAILED, EVENT_PERSON_NEAR
+};
+
+struct CameraEvent
+{
+    bool photoTaken;
+    char eventId[32]; // Shared unique identifier
+    unsigned long timestamp;
 };
 struct SystemEvent
 {
