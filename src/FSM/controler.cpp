@@ -4,7 +4,6 @@
 #include "fingerprint_sensor.h"
 #include "ultrasonic_sensor.h"
 #include "camera_uploader.h"
-
 void TaskSystemManager(void *pvParameters)
 {
     SystemState currentState = STATE_IDLE;
@@ -17,7 +16,22 @@ void TaskSystemManager(void *pvParameters)
     {
         if (xQueueReceive(xEventQueue, &event, portMAX_DELAY) == pdTRUE)
         {
+            // --- 1. GLOBAL EVENT ROUTING ---
+            // Asynchronous camera uploads finish seconds later. Intercept and
+            // forward log payloads to xLogQueue regardless of current FSM state.
+            if (event.type == EVENT_UPLOAD_LOG)
+            {
+                Serial.println("[FSM] Log payload received from Camera. Forwarding to xLogQueue...");
+                sendToLcd("logs uploading ...", "STATUS: INPROGRESS", true);
+                if (xQueueSend(xLogQueue, &event, 0) != pdTRUE)
+                {
+                    Serial.println("[FSM] xLogQueue full! Log event dropped.");
+                    sendToLcd("logs uploading ...", "STATUS: FAILED", true);
+                }
+                continue; // Event handled, skip state machine check
+            }
 
+            // --- 2. FINITE STATE MACHINE ---
             switch (currentState)
             {
 
@@ -39,7 +53,7 @@ void TaskSystemManager(void *pvParameters)
                     currentState = STATE_ACCESS_GRANTED;
 
                     char buf[17];
-                    snprintf(buf, sizeof(buf), "User #%d", event.payload);
+                    snprintf(buf, sizeof(buf), "User #%d", event.payload.intValue);
                     sendToLcd("Access Granted!", buf);
                     triggerCameraUpload(); // Capture and upload photo
 
@@ -47,8 +61,7 @@ void TaskSystemManager(void *pvParameters)
                     vTaskDelay(pdMS_TO_TICKS(3000)); // Hold open for 3 seconds
                     doorServo.write(0);              // Relock door
 
-                    xQueueReset(xEventQueue);  // Clear any pending events
-                    resetUltrasonicPresence(); // Clear any pending events
+                    resetUltrasonicPresence();
                     currentState = STATE_IDLE;
                     sendToLcd("System Ready", "Standby...");
                 }
@@ -62,28 +75,24 @@ void TaskSystemManager(void *pvParameters)
                         sendToLcd("Access Denied!", "Try Again");
                         triggerCameraUpload();           // Capture and upload photo of the person
                         vTaskDelay(pdMS_TO_TICKS(2000)); // Display message for 2 seconds
-                        xQueueReset(xEventQueue);
-                        resetUltrasonicPresence(); // Clear any pending events
+                        resetUltrasonicPresence();       // Clear any pending events
                         currentState = STATE_IDLE;
-                        doorServo.write(0); // Relock door
-
                         sendToLcd("System Ready", "Standby...");
                     }
                     else
                     {
                         vTaskDelay(pdMS_TO_TICKS(2000));
                         currentState = STATE_AWAITING_FINGER;
-                        doorServo.write(0); // Relock door
-                        xQueueReset(xEventQueue);
                         sendToLcd("Welcome!", "Scan Finger...");
                     }
                 }
                 else if (event.type == EVENT_PERSON_LEFT)
                 {
+                    doorServo.write(0); // Close sensor cover
+                    resetUltrasonicPresence();
                     currentState = STATE_IDLE;
                     sendToLcd("System Ready", "Standby...");
                 }
-
                 break;
 
             default:

@@ -38,13 +38,16 @@ void setup()
   xLcdQueue = xQueueCreate(5, sizeof(LcdMessage));
   xLogQueue = xQueueCreate(5, sizeof(LogPayload));
 
+  connectWiFi(); // Connect to Wi-Fi
+  initCamera();  // Initialize Camera
+
+  delay(1000); // Allow for init
+
   initializeLCD();   // Initialize LCD
   initFingerprint(); // Initialize Fingerprint Sensor
   initializeServo(); // Initialize Servo Pin
 
   initializeUltrasonicSensor(); // Initialize Ultrasonic
-  connectWiFi();                // Connect to Wi-Fi
-  initCamera();                 // Initialize Camera
 
   xTaskCreatePinnedToCore(TaskSystemManager, "FSM_Task", 4096, NULL, 3, NULL, 1);
   xTaskCreatePinnedToCore(TaskNetworkLogger, "NETWORK_TASK", 4096, NULL, 1, NULL, 0);

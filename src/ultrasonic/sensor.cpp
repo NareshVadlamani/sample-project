@@ -36,7 +36,7 @@ void readUltrasonicSensor()
         if (!activePresence)
         {
             activePresence = true;
-            SystemEvent ev = {EVENT_PERSON_NEAR, 0};
+            SystemEvent ev = {EVENT_PERSON_NEAR, {0}};
             xQueueSend(xEventQueue, &ev, 0);
         }
     }
@@ -44,7 +44,7 @@ void readUltrasonicSensor()
     {
 
         activePresence = false;
-        SystemEvent ev = {EVENT_PERSON_LEFT, 0};
+        SystemEvent ev = {EVENT_PERSON_LEFT, {0}};
         xQueueSend(xEventQueue, &ev, 0);
     }
 }

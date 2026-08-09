@@ -127,12 +127,12 @@ void TaskFingerprint(void *pvParameters)
       int fingerID = getFingerprintID();
       if (fingerID >= 0)
       {
-        SystemEvent ev = {EVENT_FINGER_MATCHED, finger.fingerID};
+        SystemEvent ev = {EVENT_FINGER_MATCHED, {finger.fingerID}};
         xQueueSend(xEventQueue, &ev, 0);
       }
       else
       {
-        SystemEvent ev = {EVENT_FINGER_FAILED, 0};
+        SystemEvent ev = {EVENT_FINGER_FAILED, {0}};
         xQueueSend(xEventQueue, &ev, 0);
       }
     }
@@ -152,7 +152,7 @@ void initFingerprint()
     finger.getTemplateCount();
     nextEnrollID = finger.templateCount + 1;
     xTaskCreatePinnedToCore(
-        TaskFingerprint, "FingerprintTask", 4096, NULL, 0, NULL, 1);
+        TaskFingerprint, "FingerprintTask", 4096, NULL, 4, NULL, 1);
     return;
   }
   else

@@ -56,7 +56,10 @@ String uploadImageToCloud(uint8_t *imageBytes, size_t length)
   size_t totalLen = head.length() + length + tail.length();
 
   // 5. Allocate buffer & assemble payload
-  uint8_t *payloadBuffer = (uint8_t *)malloc(totalLen);
+  uint8_t *payloadBuffer = psramFound()
+                               ? (uint8_t *)ps_malloc(totalLen)
+                               : (uint8_t *)malloc(totalLen);
+
   if (!payloadBuffer)
   {
     Serial.println("[CameraTask] Out of memory for upload buffer!");
@@ -89,41 +92,46 @@ String uploadImageToCloud(uint8_t *imageBytes, size_t length)
 
 void captureAndUpload(CameraEvent event)
 {
-
-  camera_fb_t *fb = esp_camera_fb_get(); // 1. Capture image frame from camera
-
+  camera_fb_t *fb = esp_camera_fb_get();
   if (!fb)
   {
-    Serial.println("Camera capture failed!");
+    Serial.println("[Camera] Capture failed!");
     return;
   }
 
-  Serial.printf("Captured image size: %u bytes. Uploading...\n", fb->len);
+  Serial.printf("[Camera] Captured %u bytes. Uploading...\n", fb->len);
   String responseJson = uploadImageToCloud(fb->buf, fb->len);
-  esp_camera_fb_return(fb); // Release frame memory back to camera driver
-  event.photoTaken = true;  // Mark that a photo has been taken
+  esp_camera_fb_return(fb); // Release frame memory back to driver immediately
+  event.photoTaken = true;
 
-  // 4. Parse returned JSON payload
   if (responseJson.length() > 0)
   {
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, responseJson);
 
+    // 1. Check deserialization success AND API success status
     if (!err && doc["success"].as<bool>())
     {
+      const char *extractedUrl = doc["data"]["public_id"];
 
-      // Construct lightweight log payload
-      LogPayload payload;
-      snprintf(payload.imageUrl, sizeof(payload.imageUrl), "%s", doc["data"]["url"].as<const char *>());
-      strncpy(payload.name, "Naresh", sizeof(payload.name) - 1);
-      payload.name[sizeof(payload.name) - 1] = '\0'; // Manually ensure null-termination
+      // 2. Safeguard against nullptr before copying string
+      if (extractedUrl != nullptr)
+      {
+        SystemEvent logEvent;
+        logEvent.type = EVENT_UPLOAD_LOG;
 
-      // 5. Push payload to pure logging task
-      xQueueSend(xLogQueue, &payload, 0);
+        // Populate logData inside the union
+        snprintf(logEvent.payload.logData.imageUrl, sizeof(logEvent.payload.logData.imageUrl), "%s", extractedUrl);
+        snprintf(logEvent.payload.logData.name, sizeof(logEvent.payload.logData.name), "%s", "Naresh");
+        // logEvent.payload.logData.userId = 101;
+        // logEvent.payload.logData.logReason = EVENT_FINGER_MATCHED;
+
+        // 2. Dispatch event to xEventQueue
+        xQueueSend(xEventQueue, &logEvent, 0);
+      }
     }
   }
 }
-
 static void TaskCameraUploader(void *pvParameters)
 {
   CameraEvent event;
