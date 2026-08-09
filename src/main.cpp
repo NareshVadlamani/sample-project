@@ -52,7 +52,7 @@ void setup()
   initializeUltrasonicSensor(); // Initialize Ultrasonic
 
   xTaskCreatePinnedToCore(TaskSystemManager, "FSM_Task", 4096, NULL, 3, NULL, 1);
-  xTaskCreatePinnedToCore(TaskNetworkLogger, "NETWORK_TASK", 4096, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(TaskNetworkLogger, "NETWORK_TASK", 4096, NULL, 2, NULL, 0);
 
   Serial.println("--- ESP32-S3 Obstacle Detection System Ready ---");
 }

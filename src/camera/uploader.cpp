@@ -108,35 +108,8 @@ void captureAndUpload(CameraEvent event)
   String responseJson = uploadImageToCloud(fb->buf, fb->len, event.eventId);
   esp_camera_fb_return(fb); // Release frame memory back to driver immediately
   event.photoTaken = true;
-
-  if (responseJson.length() > 0)
-  {
-    JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, responseJson);
-
-    // 1. Check deserialization success AND API success status
-    if (!err && doc["success"].as<bool>())
-    {
-      const char *extractedUrl = doc["data"]["public_id"];
-
-      // 2. Safeguard against nullptr before copying string
-      if (extractedUrl != nullptr)
-      {
-        SystemEvent logEvent;
-        logEvent.type = EVENT_UPLOAD_LOG;
-
-        // Populate logData inside the union
-        snprintf(logEvent.payload.logData.imageUrl, sizeof(logEvent.payload.logData.imageUrl), "%s", extractedUrl);
-        snprintf(logEvent.payload.logData.name, sizeof(logEvent.payload.logData.name), "%s", "Naresh");
-        // logEvent.payload.logData.userId = 101;
-        // logEvent.payload.logData.logReason = EVENT_FINGER_MATCHED;
-
-        // 2. Dispatch event to xEventQueue
-        xQueueSend(xEventQueue, &logEvent, 0);
-      }
-    }
-  }
 }
+
 static void TaskCameraUploader(void *pvParameters)
 {
   CameraEvent event;
@@ -215,5 +188,5 @@ void initCamera()
   cameraQueue = xQueueCreate(5, sizeof(CameraEvent));
 
   xTaskCreatePinnedToCore(
-      TaskCameraUploader, "CameraCaptureTask", 8192, NULL, 0, NULL, 1);
+      TaskCameraUploader, "CameraCaptureTask", 8192, NULL, 0, NULL, 0);
 }

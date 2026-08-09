@@ -5,6 +5,7 @@
 #include "ultrasonic_sensor.h"
 #include "camera_uploader.h"
 #include "helper_timer.h"
+#include "network_add_logs.h"
 
 void TaskSystemManager(void *pvParameters)
 {
@@ -18,20 +19,6 @@ void TaskSystemManager(void *pvParameters)
     {
         if (xQueueReceive(xEventQueue, &event, portMAX_DELAY) == pdTRUE)
         {
-            // --- 1. GLOBAL EVENT ROUTING ---
-            // Asynchronous camera uploads finish seconds later. Intercept and
-            // forward log payloads to xLogQueue regardless of current FSM state.
-            if (event.type == EVENT_UPLOAD_LOG)
-            {
-                Serial.println("[FSM] Log payload received from Camera. Forwarding to xLogQueue...");
-                sendToLcd("logs uploading ...", "STATUS: INPROGRESS", true);
-                if (xQueueSend(xLogQueue, &event, 0) != pdTRUE)
-                {
-                    Serial.println("[FSM] xLogQueue full! Log event dropped.");
-                    sendToLcd("logs uploading ...", "STATUS: FAILED", true);
-                }
-                continue; // Event handled, skip state machine check
-            }
 
             // --- 2. FINITE STATE MACHINE ---
             switch (currentState)
@@ -61,6 +48,7 @@ void TaskSystemManager(void *pvParameters)
                     snprintf(buf, sizeof(buf), "User #%d", event.payload.intValue);
                     sendToLcd("Access Granted!", buf);
                     triggerCameraUpload(eventId); // Capture and upload photo
+                    triggerAddLog(eventId, "FINGERPRINT_MATCHED");
 
                     doorServo.write(90);             // Unlock door
                     vTaskDelay(pdMS_TO_TICKS(3000)); // Hold open for 3 seconds
@@ -82,7 +70,8 @@ void TaskSystemManager(void *pvParameters)
                         generateEventId(eventId, sizeof(eventId));
 
                         sendToLcd("Access Denied!", "Try Again");
-                        triggerCameraUpload(eventId);    // Capture and upload photo of the person
+                        triggerCameraUpload(eventId); // Capture and upload photo of the person
+                        triggerAddLog(eventId, "FINGERPRINT_FAILED");
                         vTaskDelay(pdMS_TO_TICKS(2000)); // Display message for 2 seconds
                         resetUltrasonicPresence();       // Clear any pending events
                         currentState = STATE_IDLE;

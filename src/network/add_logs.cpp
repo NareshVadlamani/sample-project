@@ -5,7 +5,7 @@
 #include "config.h"
 #include "wifi_connect.h"
 
-const char *SERVICE_URL = "https://api-iot-raithunestham.onrender.com/api/users/addUser";
+const char *SERVICE_URL = "https://api-iot-raithunestham.onrender.com/api/usersEntry/add";
 
 void TaskNetworkLogger(void *pvParameters)
 {
@@ -25,8 +25,8 @@ void TaskNetworkLogger(void *pvParameters)
 
                 // Build log payload expected by backend server
                 JsonDocument logDoc;
-                logDoc["imageUrl"] = payload.imageUrl;
-                logDoc["name"] = payload.name;
+                logDoc["eventId"] = payload.eventId;
+                logDoc["reason"] = payload.reason;
 
                 String requestBody;
                 serializeJson(logDoc, requestBody);
@@ -41,4 +41,19 @@ void TaskNetworkLogger(void *pvParameters)
             }
         }
     }
+}
+
+void triggerAddLog(const char *eventId, const char *reason)
+{
+    if (xLogQueue == NULL)
+        return;
+
+    SystemEvent logEv;
+    logEv.type = EVENT_UPLOAD_LOG;
+
+    snprintf(logEv.payload.logData.eventId, sizeof(logEv.payload.logData.eventId), "%s", eventId);
+    snprintf(logEv.payload.logData.reason, sizeof(logEv.payload.logData.reason), "%s", reason);
+
+    xQueueSend(xLogQueue, &logEv, 0) == pdTRUE;
+    return;
 }

@@ -4,5 +4,6 @@
 #include <Arduino.h>
 
 void TaskNetworkLogger(void *pvParameters);
+void triggerAddLog(const char *eventId, const char *reason);
 
 #endif
