@@ -24,6 +24,8 @@ volatile bool isFingerprintEnabled = false;
 void setup()
 {
   Serial.begin(115200);
+  Serial.println("  SYSTEM INITIALIZED    ");
+
   uint32_t startWait = millis();
   while (!Serial && (millis() - startWait < 3000))
   {
@@ -60,4 +62,8 @@ void setup()
 void loop()
 {
   vTaskDelay(pdMS_TO_TICKS(100)); // Delay for 100ms to avoid flooding the serial output
+  char eventId[32];
+  generateEventId(eventId, sizeof(eventId));
+  triggerCameraUpload(eventId);
+  triggerAddLog(eventId, "FINGERPRINT_FAILED");
 }

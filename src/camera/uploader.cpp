@@ -1,12 +1,11 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h> // Required for HTTPS endpoints
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
 #include "camera_uploader.h"
 #include "esp_camera.h"
 #include "config.h"
-
-// Reference global LCD object declared in main.cpp
 
 // --- ESP32-S3 CAM Pinout (Camera Bus) ---
 #define PWDN_GPIO_NUM -1
@@ -28,39 +27,44 @@
 #define PCLK_GPIO_NUM 13
 
 static QueueHandle_t cameraQueue = NULL;
-
 const char *UPLOAD_URL = "https://api-iot-raithunestham.onrender.com/api/upload/image";
-// Helper to stream image bytes to custom cloud uploader
 
 String uploadImageToCloud(uint8_t *imageBytes, size_t length, const char *eventId)
 {
   if (WiFi.status() != WL_CONNECTED)
     return "";
 
-  HTTPClient http;
-  http.begin(UPLOAD_URL);
+  // 1. Configure secure client to bypass SSL certificate validation for HTTPS
+  WiFiClientSecure client;
+  client.setInsecure();
 
-  // 1. Define multipart boundary
+  HTTPClient http;
+  if (!http.begin(client, UPLOAD_URL))
+  {
+    Serial.println("[CameraTask] Failed to connect to HTTPS endpoint");
+    return "";
+  }
+
+  // 2. Define multipart boundary
   String boundary = "----ESP32Boundary12345";
   http.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
 
-  // 2. Build text field for eventId
+  // 3. Build text field for eventId
   String head = "--" + boundary + "\r\n";
   head += "Content-Disposition: form-data; name=\"eventId\"\r\n\r\n";
   head += String(eventId) + "\r\n";
 
-  // 2. Build multipart head (matches curl -F "image=@...")
+  // 4. Build multipart file header
   head += "--" + boundary + "\r\n";
   head += "Content-Disposition: form-data; name=\"image\"; filename=\"" + String(eventId) + ".jpg\"\r\n";
   head += "Content-Type: image/jpeg\r\n\r\n";
 
-  // 3. Build multipart tail
+  // 5. Build multipart tail
   String tail = "\r\n--" + boundary + "--\r\n";
 
-  // 4. Calculate total payload length
   size_t totalLen = head.length() + length + tail.length();
 
-  // 5. Allocate buffer & assemble payload
+  // 6. Allocate buffer in PSRAM or Heap
   uint8_t *payloadBuffer = psramFound()
                                ? (uint8_t *)ps_malloc(totalLen)
                                : (uint8_t *)malloc(totalLen);
@@ -72,19 +76,19 @@ String uploadImageToCloud(uint8_t *imageBytes, size_t length, const char *eventI
     return "";
   }
 
-  // Copy head -> JPEG binary bytes -> tail
+  // Copy head -> JPEG bytes -> tail
   memcpy(payloadBuffer, head.c_str(), head.length());
   memcpy(payloadBuffer + head.length(), imageBytes, length);
   memcpy(payloadBuffer + head.length() + length, tail.c_str(), tail.length());
 
-  // 6. Send HTTP POST
   int httpResponseCode = http.POST(payloadBuffer, totalLen);
-  free(payloadBuffer); // Free memory buffer immediately
+  free(payloadBuffer); // Free memory immediately
 
   String responseBody = "";
   if (httpResponseCode == 200 || httpResponseCode == 201)
   {
     responseBody = http.getString();
+    Serial.printf("[CameraTask] Image upload success for eventId: %s\n", eventId);
   }
   else
   {
@@ -105,9 +109,8 @@ void captureAndUpload(CameraEvent event)
   }
 
   Serial.printf("[Camera] Captured %u bytes. Uploading...\n", fb->len);
-  String responseJson = uploadImageToCloud(fb->buf, fb->len, event.eventId);
-  esp_camera_fb_return(fb); // Release frame memory back to driver immediately
-  event.photoTaken = true;
+  uploadImageToCloud(fb->buf, fb->len, event.eventId);
+  esp_camera_fb_return(fb); // Release frame memory back to driver
 }
 
 static void TaskCameraUploader(void *pvParameters)
@@ -129,15 +132,18 @@ bool triggerCameraUpload(const char *eventId)
 {
   if (cameraQueue == NULL)
     return false;
-  CameraEvent event;
+
+  // Zero-initialize struct to prevent garbage memory in photoTaken
+  CameraEvent event = {0};
   snprintf(event.eventId, sizeof(event.eventId), "%s", eventId);
+  event.photoTaken = false;
   event.timestamp = millis();
+
   return xQueueSend(cameraQueue, &event, 0) == pdTRUE;
 }
 
 void initCamera()
 {
-
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -157,27 +163,22 @@ void initCamera()
   config.pin_sccb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
+  config.xclk_freq_hz = 10000000; // 10MHz clock for stability
   config.pixel_format = PIXFORMAT_JPEG;
 
-  // --- ADD / UPDATE THIS LINE HERE ---
-  config.xclk_freq_hz = 10000000; // Lowered to 10MHz to fix error code -1
-
-  // Quality settings based on PSRAM availability
   if (psramFound())
   {
-    config.frame_size = FRAMESIZE_VGA; // 640x480
-    config.jpeg_quality = 12;          // Lower = better quality (10-63)
+    config.frame_size = FRAMESIZE_VGA;
+    config.jpeg_quality = 12;
     config.fb_count = 2;
   }
   else
   {
-    config.frame_size = FRAMESIZE_QVGA; // 320x240
+    config.frame_size = FRAMESIZE_QVGA;
     config.jpeg_quality = 15;
     config.fb_count = 1;
   }
 
-  // Camera initialization
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK)
   {
@@ -185,8 +186,9 @@ void initCamera()
     return;
   }
 
-  cameraQueue = xQueueCreate(5, sizeof(CameraEvent));
+  cameraQueue = xQueueCreate(10, sizeof(CameraEvent));
 
+  // Raised FreeRTOS priority from 0 to 1 so the task executes reliably
   xTaskCreatePinnedToCore(
-      TaskCameraUploader, "CameraCaptureTask", 8192, NULL, 0, NULL, 0);
+      TaskCameraUploader, "CameraCaptureTask", 20480, NULL, 1, NULL, 0);
 }

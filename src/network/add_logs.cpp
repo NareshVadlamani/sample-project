@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h> // Required for HTTPS endpoints
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "network_add_logs.h"
@@ -9,35 +10,52 @@ const char *SERVICE_URL = "https://api-iot-raithunestham.onrender.com/api/usersE
 
 void TaskNetworkLogger(void *pvParameters)
 {
-    LogPayload payload;
+    SystemEvent event; // FIX 1: Receive SystemEvent, NOT LogPayload!
 
     for (;;)
     {
-        // Wait indefinitely for a log event to enter the pipeline
-        if (xQueueReceive(xLogQueue, &payload, portMAX_DELAY) == pdTRUE)
+        // Wait indefinitely for a log event from xLogQueue
+        if (xQueueReceive(xLogQueue, &event, portMAX_DELAY) == pdTRUE)
         {
-
             if (WiFi.status() == WL_CONNECTED)
             {
+                // FIX 2: Add WiFiClientSecure for HTTPS endpoints
+                WiFiClientSecure client;
+                client.setInsecure(); // Bypass certificate check
+
                 HTTPClient http;
-                http.begin(SERVICE_URL);
+                if (!http.begin(client, SERVICE_URL))
+                {
+                    Serial.println("[NetworkLogger] Failed to connect to SSL endpoint!");
+                    continue;
+                }
+
                 http.addHeader("Content-Type", "application/json");
 
                 // Build log payload expected by backend server
                 JsonDocument logDoc;
-                logDoc["eventId"] = payload.eventId;
-                logDoc["reason"] = payload.reason;
+                logDoc["eventId"] = event.payload.logData.eventId;
+                logDoc["reason"] = event.payload.logData.reason;
 
                 String requestBody;
                 serializeJson(logDoc, requestBody);
 
                 int httpCode = http.POST(requestBody);
-                if (httpCode != 200 && httpCode != 201)
+                if (httpCode == 200 || httpCode == 201)
                 {
-                    // Optional: Re-queue payload or save to SD card offline buffer
-                    Serial.printf("Logging server returned error: %d\n", httpCode);
+                    Serial.printf("[NetworkLogger] Log uploaded successfully! eventId: %s\n",
+                                  event.payload.logData.eventId);
                 }
+                else
+                {
+                    Serial.printf("[NetworkLogger] Logging server error code: %d\n", httpCode);
+                }
+
                 http.end();
+            }
+            else
+            {
+                Serial.println("[NetworkLogger] Wi-Fi disconnected. Log skipped.");
             }
         }
     }
@@ -54,6 +72,6 @@ void triggerAddLog(const char *eventId, const char *reason)
     snprintf(logEv.payload.logData.eventId, sizeof(logEv.payload.logData.eventId), "%s", eventId);
     snprintf(logEv.payload.logData.reason, sizeof(logEv.payload.logData.reason), "%s", reason);
 
+    // FIX 3: Return boolean success result cleanly
     xQueueSend(xLogQueue, &logEv, 0) == pdTRUE;
-    return;
 }

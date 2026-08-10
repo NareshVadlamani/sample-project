@@ -56,7 +56,6 @@ void TaskSystemManager(void *pvParameters)
 
                     resetUltrasonicPresence();
                     currentState = STATE_IDLE;
-                    sendToLcd("System Ready", "Standby...");
                 }
                 else if (event.type == EVENT_FINGER_FAILED)
                 {
@@ -75,7 +74,6 @@ void TaskSystemManager(void *pvParameters)
                         vTaskDelay(pdMS_TO_TICKS(2000)); // Display message for 2 seconds
                         resetUltrasonicPresence();       // Clear any pending events
                         currentState = STATE_IDLE;
-                        sendToLcd("System Ready", "Standby...");
                     }
                     else
                     {
