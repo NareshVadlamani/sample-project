@@ -16,6 +16,7 @@
 #define FP_TX_PIN 21      // fingerprint sensor TX pin (connects to sensor RX)
 #define SERVO_PIN 1       // servo control pin
 #define ENROLL_BTN_PIN 14 // fingerprint enrollment button pin
+#define WIFI_LED_PIN 45
 
 #define SOUND_SPEED 0.0343
 const float TRIGGER_DISTANCE_CM = 30.0;
@@ -27,7 +28,8 @@ enum SystemState
     STATE_IDLE,
     STATE_AWAITING_FINGER,
     STATE_ACCESS_GRANTED,
-    STATE_ACCESS_DENIED
+    STATE_ACCESS_DENIED,
+    STATE_UPDATE_LOG
 };
 
 enum EventType
@@ -35,13 +37,29 @@ enum EventType
     EVENT_PERSON_NEAR,
     EVENT_PERSON_LEFT,
     EVENT_FINGER_MATCHED,
-    EVENT_FINGER_FAILED
+    EVENT_FINGER_FAILED,
+    EVENT_UPLOAD_LOG
+};
+struct LogPayload
+{
+    char eventId[32];
+    char reason[64]; // e.g., EVENT_FINGER_FAILED, EVENT_PERSON_NEAR
 };
 
+struct CameraEvent
+{
+    bool photoTaken;
+    char eventId[32]; // Shared unique identifier
+    unsigned long timestamp;
+};
 struct SystemEvent
 {
     EventType type;
-    int payload;
+    union
+    {
+        int intValue;
+        LogPayload logData;
+    } payload;
 };
 
 struct LcdMessage
@@ -58,6 +76,7 @@ extern Servo doorServo;
 
 extern QueueHandle_t xEventQueue;
 extern QueueHandle_t xLcdQueue;
+extern QueueHandle_t xLogQueue;
 
 extern volatile bool isFingerprintEnabled;
 
