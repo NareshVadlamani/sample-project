@@ -54,7 +54,7 @@ void setup()
   initializeUltrasonicSensor(); // Initialize Ultrasonic
 
   xTaskCreatePinnedToCore(TaskSystemManager, "FSM_Task", 4096, NULL, 3, NULL, 1);
-  xTaskCreatePinnedToCore(TaskNetworkLogger, "NETWORK_TASK", 4096, NULL, 2, NULL, 0);
+  xTaskCreatePinnedToCore(TaskNetworkLogger, "NETWORK_TASK", 12288, NULL, 2, NULL, 0);
 
   Serial.println("--- ESP32-S3 Obstacle Detection System Ready ---");
 }
@@ -62,8 +62,4 @@ void setup()
 void loop()
 {
   vTaskDelay(pdMS_TO_TICKS(100)); // Delay for 100ms to avoid flooding the serial output
-  char eventId[32];
-  generateEventId(eventId, sizeof(eventId));
-  triggerCameraUpload(eventId);
-  triggerAddLog(eventId, "FINGERPRINT_FAILED");
 }

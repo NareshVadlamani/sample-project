@@ -1,5 +1,5 @@
 #include <WiFi.h>
-#include <WiFiClientSecure.h> // Required for HTTPS endpoints
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "network_add_logs.h"
@@ -10,29 +10,26 @@ const char *SERVICE_URL = "https://api-iot-raithunestham.onrender.com/api/usersE
 
 void TaskNetworkLogger(void *pvParameters)
 {
-    SystemEvent event; // FIX 1: Receive SystemEvent, NOT LogPayload!
+    SystemEvent event;
 
     for (;;)
     {
-        // Wait indefinitely for a log event from xLogQueue
         if (xQueueReceive(xLogQueue, &event, portMAX_DELAY) == pdTRUE)
         {
             if (WiFi.status() == WL_CONNECTED)
             {
-                // FIX 2: Add WiFiClientSecure for HTTPS endpoints
                 WiFiClientSecure client;
-                client.setInsecure(); // Bypass certificate check
+                client.setInsecure(); // Bypass SSL certificate verification
 
                 HTTPClient http;
                 if (!http.begin(client, SERVICE_URL))
                 {
-                    Serial.println("[NetworkLogger] Failed to connect to SSL endpoint!");
+                    Serial.println("[NetworkLogger] Failed to initialize SSL connection!");
                     continue;
                 }
 
                 http.addHeader("Content-Type", "application/json");
 
-                // Build log payload expected by backend server
                 JsonDocument logDoc;
                 logDoc["eventId"] = event.payload.logData.eventId;
                 logDoc["reason"] = event.payload.logData.reason;
@@ -61,10 +58,11 @@ void TaskNetworkLogger(void *pvParameters)
     }
 }
 
-void triggerAddLog(const char *eventId, const char *reason)
+// FIX 3: Properly match return type declared in header file
+bool triggerAddLog(const char *eventId, const char *reason)
 {
     if (xLogQueue == NULL)
-        return;
+        return false;
 
     SystemEvent logEv;
     logEv.type = EVENT_UPLOAD_LOG;
@@ -72,6 +70,5 @@ void triggerAddLog(const char *eventId, const char *reason)
     snprintf(logEv.payload.logData.eventId, sizeof(logEv.payload.logData.eventId), "%s", eventId);
     snprintf(logEv.payload.logData.reason, sizeof(logEv.payload.logData.reason), "%s", reason);
 
-    // FIX 3: Return boolean success result cleanly
-    xQueueSend(xLogQueue, &logEv, 0) == pdTRUE;
+    return (xQueueSend(xLogQueue, &logEv, 0) == pdTRUE);
 }

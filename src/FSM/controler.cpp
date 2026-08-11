@@ -48,7 +48,7 @@ void TaskSystemManager(void *pvParameters)
                     snprintf(buf, sizeof(buf), "User #%d", event.payload.intValue);
                     sendToLcd("Access Granted!", buf);
                     triggerCameraUpload(eventId); // Capture and upload photo
-                    triggerAddLog(eventId, "FINGERPRINT_MATCHED");
+                    triggerAddLog(eventId, "FINGER MATCHED");
 
                     doorServo.write(90);             // Unlock door
                     vTaskDelay(pdMS_TO_TICKS(3000)); // Hold open for 3 seconds
@@ -70,7 +70,7 @@ void TaskSystemManager(void *pvParameters)
 
                         sendToLcd("Access Denied!", "Try Again");
                         triggerCameraUpload(eventId); // Capture and upload photo of the person
-                        triggerAddLog(eventId, "FINGERPRINT_FAILED");
+                        triggerAddLog(eventId, "FINGER FAILED");
                         vTaskDelay(pdMS_TO_TICKS(2000)); // Display message for 2 seconds
                         resetUltrasonicPresence();       // Clear any pending events
                         currentState = STATE_IDLE;
