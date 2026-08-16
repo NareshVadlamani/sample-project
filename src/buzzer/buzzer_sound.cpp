@@ -3,25 +3,24 @@
 
 QueueHandle_t xBuzzerQueue = NULL;
 
-// Use LEDC Channel 1 (Channel 0 is used by Camera XCLK)
+// Use LEDC Channel 1 (Channel 0 is reserved for Camera XCLK)
 #define BUZZER_LEDC_CHANNEL 1
-#define BUZZER_LEDC_RESOLUTION 8 // 8-bit resolution (0-255)
+#define BUZZER_LEDC_RESOLUTION 8 // 8-bit (0-255)
+#define BUZZER_DEFAULT_FREQ 2000
 
 static void playTone(uint32_t freq, uint32_t durationMs)
 {
     if (freq > 0)
     {
-        ledcAttachPin(BUZZER_PIN, BUZZER_LEDC_CHANNEL);
+        // Update frequency and set 50% duty cycle (sound ON)
         ledcWriteTone(BUZZER_LEDC_CHANNEL, freq);
-        ledcWrite(BUZZER_LEDC_CHANNEL, 127); // 50% duty cycle
+        ledcWrite(BUZZER_LEDC_CHANNEL, 127);
     }
 
     vTaskDelay(pdMS_TO_TICKS(durationMs));
 
-    // Stop tone
-    ledcWriteTone(BUZZER_LEDC_CHANNEL, 0);
+    // Turn sound OFF by setting duty cycle to 0 (DO NOT set tone freq to 0)
     ledcWrite(BUZZER_LEDC_CHANNEL, 0);
-    ledcDetachPin(BUZZER_PIN);
 }
 
 static void TaskBuzzer(void *pvParameters)
@@ -74,11 +73,14 @@ void triggerBuzzer(BuzzerPattern pattern)
 
 void initBuzzer()
 {
-    pinMode(BUZZER_PIN, OUTPUT);
-    digitalWrite(BUZZER_PIN, LOW);
+    // Configure LEDC Timer and attach pin ONCE during initialization
+    ledcSetup(BUZZER_LEDC_CHANNEL, BUZZER_DEFAULT_FREQ, BUZZER_LEDC_RESOLUTION);
+    ledcAttachPin(BUZZER_PIN, BUZZER_LEDC_CHANNEL);
+    ledcWrite(BUZZER_LEDC_CHANNEL, 0); // Start silent
 
     xBuzzerQueue = xQueueCreate(5, sizeof(BuzzerPattern));
 
-    xTaskCreatePinnedToCore(TaskBuzzer, "BUZZER_TASK", 2048, NULL, 1, NULL, 1);
+    // Increased stack depth from 2048 to 4096 bytes to avoid FreeRTOS stack panic
+    xTaskCreatePinnedToCore(TaskBuzzer, "BUZZER_TASK", 4096, NULL, 1, NULL, 1);
     Serial.println("[Buzzer] Initialized successfully.");
 }

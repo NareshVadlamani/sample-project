@@ -14,10 +14,10 @@
 #define ECHO_PIN 3        // ultrasonic sensor echo pin
 #define FP_RX_PIN 20      // fingerprint sensor RX pin (connects to sensor TX)
 #define FP_TX_PIN 21      // fingerprint sensor TX pin (connects to sensor RX)
-#define SERVO_PIN 1       // servo control pin
+#define SERVO_PIN 47      // servo control pin
 #define ENROLL_BTN_PIN 14 // fingerprint enrollment button pin
 #define WIFI_LED_PIN 45
-#define BUZZER_PIN 47 // buzzer pin
+#define BUZZER_PIN 1 // buzzer pin
 
 #define SOUND_SPEED 0.0343
 const float TRIGGER_DISTANCE_CM = 30.0;
