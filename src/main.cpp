@@ -12,6 +12,7 @@
 #include "config.h"
 #include "network_add_logs.h"
 #include "helper_timer.h"
+#include "buzzer_sound.h"
 
 QueueHandle_t xEventQueue = NULL;
 QueueHandle_t xLcdQueue = NULL;
@@ -46,15 +47,16 @@ void setup()
 
   delay(1000); // Allow for init
 
-  initTime();
-  initializeLCD();   // Initialize LCD
-  initFingerprint(); // Initialize Fingerprint Sensor
-  initializeServo(); // Initialize Servo Pin
+  initBuzzer();
+  // initTime();
+  // initializeLCD();   // Initialize LCD
+  // initFingerprint(); // Initialize Fingerprint Sensor
+  // initializeServo(); // Initialize Servo Pin
 
-  initializeUltrasonicSensor(); // Initialize Ultrasonic
+  // initializeUltrasonicSensor(); // Initialize Ultrasonic
 
-  xTaskCreatePinnedToCore(TaskSystemManager, "FSM_Task", 4096, NULL, 3, NULL, 1);
-  xTaskCreatePinnedToCore(TaskNetworkLogger, "NETWORK_TASK", 12288, NULL, 2, NULL, 0);
+  // xTaskCreatePinnedToCore(TaskSystemManager, "FSM_Task", 4096, NULL, 3, NULL, 1);
+  // xTaskCreatePinnedToCore(TaskNetworkLogger, "NETWORK_TASK", 12288, NULL, 2, NULL, 0);
 
   Serial.println("--- ESP32-S3 Obstacle Detection System Ready ---");
 }
@@ -62,4 +64,5 @@ void setup()
 void loop()
 {
   vTaskDelay(pdMS_TO_TICKS(100)); // Delay for 100ms to avoid flooding the serial output
+  triggerBuzzer(BUZZ_WELCOME);
 }

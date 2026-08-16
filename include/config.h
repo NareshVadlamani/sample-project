@@ -17,6 +17,7 @@
 #define SERVO_PIN 1       // servo control pin
 #define ENROLL_BTN_PIN 14 // fingerprint enrollment button pin
 #define WIFI_LED_PIN 45
+#define BUZZER_PIN 47 // buzzer pin
 
 #define SOUND_SPEED 0.0343
 const float TRIGGER_DISTANCE_CM = 30.0;
@@ -39,6 +40,15 @@ enum EventType
     EVENT_FINGER_MATCHED,
     EVENT_FINGER_FAILED,
     EVENT_UPLOAD_LOG
+};
+
+// Buzzer sound patterns
+enum BuzzerPattern
+{
+    BUZZ_WELCOME,        // Person near
+    BUZZ_ACCESS_GRANTED, // Finger matched
+    BUZZ_ACCESS_DENIED,  // Finger failed
+    BUZZ_PHOTO_CLICK     // Photo captured
 };
 struct LogPayload
 {
@@ -77,6 +87,7 @@ extern Servo doorServo;
 extern QueueHandle_t xEventQueue;
 extern QueueHandle_t xLcdQueue;
 extern QueueHandle_t xLogQueue;
+extern QueueHandle_t xBuzzerQueue;
 
 extern volatile bool isFingerprintEnabled;
 

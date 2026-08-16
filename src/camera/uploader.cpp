@@ -6,6 +6,7 @@
 #include "camera_uploader.h"
 #include "esp_camera.h"
 #include "config.h"
+#include "buzzer_sound.h"
 
 // --- ESP32-S3 CAM Pinout (Camera Bus) ---
 #define PWDN_GPIO_NUM -1
@@ -109,6 +110,7 @@ void captureAndUpload(CameraEvent event)
   }
 
   Serial.printf("[Camera] Captured %u bytes. Uploading...\n", fb->len);
+  triggerBuzzer(BUZZ_PHOTO_CLICK);
   uploadImageToCloud(fb->buf, fb->len, event.eventId);
   esp_camera_fb_return(fb); // Release frame memory back to driver
 }

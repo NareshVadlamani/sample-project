@@ -6,6 +6,7 @@
 #include "camera_uploader.h"
 #include "helper_timer.h"
 #include "network_add_logs.h"
+#include "buzzer_sound.h"
 
 void TaskSystemManager(void *pvParameters)
 {
@@ -28,6 +29,7 @@ void TaskSystemManager(void *pvParameters)
                 if (event.type == EVENT_PERSON_NEAR)
                 {
                     retryCount = 0; // Reset retry count when a new person is detected
+                    triggerBuzzer(BUZZ_WELCOME);
                     sendToLcd("Welcome!", "Scan Finger...");
                     isFingerprintEnabled = true;
                     vTaskDelay(pdMS_TO_TICKS(500)); // Allow time for the fingerprint sensor to initialize
@@ -40,7 +42,7 @@ void TaskSystemManager(void *pvParameters)
                 if (event.type == EVENT_FINGER_MATCHED)
                 {
                     currentState = STATE_ACCESS_GRANTED;
-
+                    triggerBuzzer(BUZZ_ACCESS_GRANTED);
                     char eventId[32];
                     generateEventId(eventId, sizeof(eventId));
 
@@ -60,6 +62,7 @@ void TaskSystemManager(void *pvParameters)
                 else if (event.type == EVENT_FINGER_FAILED)
                 {
                     retryCount++;
+                    triggerBuzzer(BUZZ_ACCESS_DENIED);
                     if (retryCount >= 3)
                     {
                         retryCount = 0; // Reset retry count after reaching the limit
