@@ -7,17 +7,23 @@
 #include <Adafruit_Fingerprint.h>
 #include <ESP32Servo.h>
 
-// Pins
-#define I2C_SDA_PIN 41    // lcd SDA pin
-#define I2C_SCL_PIN 42    // lcd SCL pin
-#define TRIG_PIN 2        // ultrasonic sensor trigger pin
-#define ECHO_PIN 3        // ultrasonic sensor echo pin
-#define FP_RX_PIN 20      // fingerprint sensor RX pin (connects to sensor TX)
-#define FP_TX_PIN 21      // fingerprint sensor TX pin (connects to sensor RX)
-#define SERVO_PIN 47      // servo control pin
-#define ENROLL_BTN_PIN 14 // fingerprint enrollment button pin
-#define WIFI_LED_PIN 45
-#define BUZZER_PIN 1 // buzzer pin
+// --- I2C LCD ---
+#define I2C_SDA_PIN 41 // lcd SDA pin
+#define I2C_SCL_PIN 42 // lcd SCL pin
+
+// --- Ultrasonic Sensor ---
+#define TRIG_PIN 3  // ultrasonic sensor trigger pin
+#define ECHO_PIN 14 // ultrasonic sensor echo pin
+
+// --- Fingerprint Sensor (UART) ---
+#define FP_RX_PIN 38 // fingerprint RX (connects to sensor TX) - avoids USB D+
+#define FP_TX_PIN 21 // fingerprint TX (connects to sensor RX)
+
+// --- Actuators & Indicators ---
+#define SERVO_PIN 2      // servo control pin (Moved from 47 -> 2 for clean PWM)
+#define BUZZER_PIN 1     // buzzer pin (Clean LEDC PWM output)
+#define WIFI_LED_PIN 39  // Wi-Fi status LED (Moved from 45 -> 39)
+#define ENROLL_BTN_PIN 0 // Built-in BOOT button or external button to GND
 
 #define SOUND_SPEED 0.0343
 const float TRIGGER_DISTANCE_CM = 30.0;
