@@ -16,7 +16,7 @@
 #define ECHO_PIN 14 // ultrasonic sensor echo pin
 
 // --- Fingerprint Sensor (UART) ---
-#define FP_RX_PIN 38 // fingerprint RX (connects to sensor TX) - avoids USB D+
+#define FP_RX_PIN 20 // fingerprint RX (connects to sensor TX) - avoids USB D+
 #define FP_TX_PIN 21 // fingerprint TX (connects to sensor RX)
 
 // --- Actuators & Indicators ---

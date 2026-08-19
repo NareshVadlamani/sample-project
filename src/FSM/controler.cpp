@@ -62,9 +62,9 @@ void TaskSystemManager(void *pvParameters)
                 else if (event.type == EVENT_FINGER_FAILED)
                 {
                     retryCount++;
-                    triggerBuzzer(BUZZ_ACCESS_DENIED);
                     if (retryCount >= 3)
                     {
+                        triggerBuzzer(BUZZ_ACCESS_DENIED);
                         retryCount = 0; // Reset retry count after reaching the limit
                         currentState = STATE_ACCESS_DENIED;
 
@@ -91,6 +91,7 @@ void TaskSystemManager(void *pvParameters)
                     resetUltrasonicPresence();
                     currentState = STATE_IDLE;
                     sendToLcd("System Ready", "Standby...");
+                    isFingerprintEnabled = false;
                 }
                 break;
 
