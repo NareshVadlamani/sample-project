@@ -22,7 +22,7 @@
 // --- Actuators & Indicators ---
 #define SERVO_PIN 2      // servo control pin (Moved from 47 -> 2 for clean PWM)
 #define BUZZER_PIN 1     // buzzer pin (Clean LEDC PWM output)
-#define WIFI_LED_PIN 39  // Wi-Fi status LED (Moved from 45 -> 39)
+#define WIFI_LED_PIN 19  // Wi-Fi status LED (Moved from 39 -> 19)
 #define ENROLL_BTN_PIN 0 // Built-in BOOT button or external button to GND
 
 #define SOUND_SPEED 0.0343
