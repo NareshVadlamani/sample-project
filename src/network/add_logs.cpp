@@ -5,6 +5,7 @@
 #include "network_add_logs.h"
 #include "config.h"
 #include "wifi_connect.h"
+#include "sd_offline_sync.h"
 
 const char *SERVICE_URL = "https://api-iot-raithunestham.onrender.com/api/usersEntry/add";
 
@@ -16,6 +17,7 @@ void TaskNetworkLogger(void *pvParameters)
     {
         if (xQueueReceive(xLogQueue, &event, portMAX_DELAY) == pdTRUE)
         {
+            bool uploaded = false;
             if (WiFi.status() == WL_CONNECTED)
             {
                 WiFiClientSecure client;
@@ -42,6 +44,7 @@ void TaskNetworkLogger(void *pvParameters)
                 {
                     Serial.printf("[NetworkLogger] Log uploaded successfully! eventId: %s\n",
                                   event.payload.logData.eventId);
+                    uploaded = true;
                 }
                 else
                 {
@@ -50,9 +53,10 @@ void TaskNetworkLogger(void *pvParameters)
 
                 http.end();
             }
-            else
+            if (!uploaded)
             {
-                Serial.println("[NetworkLogger] Wi-Fi disconnected. Log skipped.");
+                Serial.println("[NetworkLogger] Wi-Fi disconnected. Log will save in sd card.");
+                saveLogOffline(event.payload.logData.eventId, event.payload.logData.reason);
             }
         }
     }

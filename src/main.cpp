@@ -13,6 +13,7 @@
 #include "network_add_logs.h"
 #include "helper_timer.h"
 #include "buzzer_sound.h"
+#include "sd_offline_sync.h"
 
 QueueHandle_t xEventQueue = NULL;
 QueueHandle_t xLcdQueue = NULL;
@@ -46,13 +47,15 @@ void setup()
   initCamera();  // Initialize Camera
 
   delay(1000); // Allow for init
-
+  if (initSDCard())
+  {
+    initOfflineSyncTask(); // Starts background auto-sync worker
+  }
   initBuzzer();
   initTime();
-  initializeLCD();   // Initialize LCD
-  initFingerprint(); // Initialize Fingerprint Sensor
-  initializeServo(); // Initialize Servo Pin
-
+  initializeLCD();              // Initialize LCD
+  initFingerprint();            // Initialize Fingerprint Sensor
+  initializeServo();            // Initialize Servo Pin
   initializeUltrasonicSensor(); // Initialize Ultrasonic
 
   xTaskCreatePinnedToCore(TaskSystemManager, "FSM_Task", 4096, NULL, 3, NULL, 1);

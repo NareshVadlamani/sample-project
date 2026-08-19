@@ -7,6 +7,7 @@
 #include "esp_camera.h"
 #include "config.h"
 #include "buzzer_sound.h"
+#include "sd_offline_sync.h"
 
 // --- ESP32-S3 CAM Pinout (Camera Bus) ---
 #define PWDN_GPIO_NUM -1
@@ -32,8 +33,6 @@ const char *UPLOAD_URL = "https://api-iot-raithunestham.onrender.com/api/upload/
 
 String uploadImageToCloud(uint8_t *imageBytes, size_t length, const char *eventId)
 {
-  if (WiFi.status() != WL_CONNECTED)
-    return "";
 
   // 1. Configure secure client to bypass SSL certificate validation for HTTPS
   WiFiClientSecure client;
@@ -111,7 +110,16 @@ void captureAndUpload(CameraEvent event)
 
   Serial.printf("[Camera] Captured %u bytes. Uploading...\n", fb->len);
   triggerBuzzer(BUZZ_PHOTO_CLICK);
-  uploadImageToCloud(fb->buf, fb->len, event.eventId);
+  String response = "";
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    response = uploadImageToCloud(fb->buf, fb->len, event.eventId);
+  }
+  if (response.length() == 0)
+  {
+    Serial.println("[Camera] Offline / upload failed. Saving image to SD card...");
+    saveImageOffline(event.eventId, fb->buf, fb->len);
+  }
   esp_camera_fb_return(fb); // Release frame memory back to driver
 }
 

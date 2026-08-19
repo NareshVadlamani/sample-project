@@ -15,6 +15,12 @@
 #define TRIG_PIN 3  // ultrasonic sensor trigger pin
 #define ECHO_PIN 14 // ultrasonic sensor echo pin
 
+// --- MicroSD Card SPI Pins ---
+#define SD_CS_PIN 38   // SD Chip Select
+#define SD_MOSI_PIN 39 // SPI MOSI
+#define SD_MISO_PIN 40 // SPI MISO
+#define SD_SCK_PIN 48  // SPI Clock (or use board SD_MMC if built-in slot)
+
 // --- Fingerprint Sensor (UART) ---
 #define FP_RX_PIN 20 // fingerprint RX (connects to sensor TX) - avoids USB D+
 #define FP_TX_PIN 21 // fingerprint TX (connects to sensor RX)
