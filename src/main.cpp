@@ -12,6 +12,7 @@
 #include "config.h"
 #include "network_add_logs.h"
 #include "helper_timer.h"
+#include "buzzer_sound.h"
 
 QueueHandle_t xEventQueue = NULL;
 QueueHandle_t xLcdQueue = NULL;
@@ -46,6 +47,7 @@ void setup()
 
   delay(1000); // Allow for init
 
+  initBuzzer();
   initTime();
   initializeLCD();   // Initialize LCD
   initFingerprint(); // Initialize Fingerprint Sensor
